@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Legal Simplifier</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f8fc;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: #1e3a8a;
+      color: white;
+      text-align: center;
+      padding: 20px 0;
+      font-size: 1.5rem;
+      letter-spacing: 0.5px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      padding: 25px;
+    }
+    h3 {
+      color: #1e3a8a;
+    }
+    input[type="file"],
+    textarea {
+      width: 100%;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+    textarea {
+      height: 120px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+      resize: vertical;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .loader {
+      text-align: center;
+      margin: 15px;
+      font-style: italic;
+      color: #555;
+    }
+    .result {
+      margin-top: 20px;
+      display: grid;
+      gap: 15px;
+    }
+    .card {
+      background: #f9fafc;
+      border-left: 5px solid #2563eb;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .card h4 {
+      margin-top: 0;
+      color: #1e40af;
+    }
+    .law-item {
+      background: #eef2ff;
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>⚖️ AI Legal Simplifier</header>
+
+  <div class="container">
+    <h3>📘 Summarize or Simplify Legal Text</h3>
+    <p>Upload a legal document or type text manually below:</p>
+
+    <input type="file" id="fileInput" accept=".pdf,.docx,.jpg,.png" />
+    <p style="text-align:center;">— OR —</p>
+    <textarea id="textInput" placeholder="Paste or type your legal text here..."></textarea>
+
+    <button onclick="processInput()">🔍 Analyze Document</button>
+    <div class="loader" id="loader"></div>
+
+    <div id="results" class="result" style="display:none;">
+      <div class="card" id="summaryCard">
+        <h4>🧾 Summary</h4>
+        <p id="summaryText">N/A</p>
+      </div>
+
+      <div class="card" id="simplifiedCard">
+        <h4>✏️ Simplified Text</h4>
+        <p id="simplifiedText">N/A</p>
+      </div>
+
+      <div class="card" id="lawCard">
+        <h4>⚖️ Related Law Details</h4>
+        <div id="lawDetails">N/A</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+
+    async function processInput() {
+      const file = document.getElementById("fileInput").files[0];
+      const text = document.getElementById("textInput").value.trim();
+      const loader = document.getElementById("loader");
+      const resultsDiv = document.getElementById("results");
+
+      if (!file && !text) {
+        alert("Please upload a file or enter text first!");
+        return;
+      }
+
+      loader.textContent = "⏳ Processing... please wait...";
+      resultsDiv.style.display = "none";
+
+      try {
+        let res;
+
+        if (file) {
+          const formData = new FormData();
+          formData.append("file", file);
+          res = await fetch(`${API_BASE}/process`, {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          res = await fetch(`${API_BASE}/process-text`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+        }
+
+        const data = await res.json();
+
+        loader.textContent = "";
+
+        // Show results
+        resultsDiv.style.display = "grid";
+        document.getElementById("summaryText").textContent = data.summary || "No summary found.";
+        document.getElementById("simplifiedText").textContent = data.simplified || "No simplified text found.";
+
+        const lawDetailsDiv = document.getElementById("lawDetails");
+        lawDetailsDiv.innerHTML = "";
+        if (data.law_details && Object.keys(data.law_details).length > 0) {
+          for (const [law, desc] of Object.entries(data.law_details)) {
+            const div = document.createElement("div");
+            div.className = "law-item";
+            div.innerHTML = `<strong>${law}:</strong> ${typeof desc === "object" ? desc.description : desc}`;
+            lawDetailsDiv.appendChild(div);
+          }
+        } else {
+          lawDetailsDiv.textContent = "No related laws found.";
+        }
+
+      } catch (err) {
+        loader.textContent = "";
+        alert("❌ Error: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
