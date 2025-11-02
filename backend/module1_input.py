@@ -33,3 +33,5 @@ def get_text(file_path):
     else:
         return "Unsupported file format."
 
+
+

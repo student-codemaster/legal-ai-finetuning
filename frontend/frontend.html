@@ -1,185 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>AI Legal Simplifier</title>
   <style>
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f5f8fc;
-      margin: 0;
-      padding: 0;
-      color: #333;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #222;
+      padding: 30px;
+      max-width: 900px;
+      margin: auto;
     }
-    header {
-      background: #1e3a8a;
-      color: white;
-      text-align: center;
-      padding: 20px 0;
-      font-size: 1.5rem;
-      letter-spacing: 0.5px;
-    }
-    .container {
-      max-width: 800px;
-      margin: 30px auto;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-      padding: 25px;
-    }
-    h3 {
-      color: #1e3a8a;
-    }
-    input[type="file"],
-    textarea {
+    h1 { color: #1e3a8a; }
+    textarea, input[type="file"] {
       width: 100%;
-      margin-top: 8px;
-      margin-bottom: 10px;
-    }
-    textarea {
-      height: 120px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
-      resize: vertical;
+      margin-top: 10px;
+      margin-bottom: 20px;
     }
     button {
       background: #2563eb;
       color: white;
+      padding: 10px 20px;
       border: none;
-      padding: 10px 16px;
       border-radius: 8px;
-      font-size: 15px;
       cursor: pointer;
     }
-    button:hover {
-      background: #1d4ed8;
+    button:hover { background: #1e40af; }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 25px;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
     }
-    .loader {
-      text-align: center;
-      margin: 15px;
-      font-style: italic;
-      color: #555;
+    pre {
+      background: #f9fafb;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-wrap;
     }
-    .result {
-      margin-top: 20px;
-      display: grid;
-      gap: 15px;
+    #train-section {
+      background: #fffbe6;
+      border: 1px solid #facc15;
+      display: none;
     }
-    .card {
-      background: #f9fafc;
-      border-left: 5px solid #2563eb;
-      padding: 15px;
+    .toggle-btn {
+      background: #facc15;
+      color: #222;
+      padding: 8px 16px;
+      border: none;
       border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
-    .card h4 {
-      margin-top: 0;
-      color: #1e40af;
+    .toggle-btn:hover { background: #eab308; }
+    .output-actions {
+      margin-top: 15px;
     }
-    .law-item {
-      background: #eef2ff;
-      border-radius: 6px;
-      padding: 8px;
-      margin-top: 5px;
+    .output-actions button {
+      margin-right: 10px;
+      background: #4b5563;
+    }
+    .output-actions button:hover {
+      background: #111827;
     }
   </style>
 </head>
 <body>
-  <header>⚖️ AI Legal Simplifier</header>
 
-  <div class="container">
-    <h3>📘 Summarize or Simplify Legal Text</h3>
-    <p>Upload a legal document or type text manually below:</p>
+  <h1>⚖️ AI Legal Simplifier</h1>
+  <p>Summarize, Simplify, and Analyze Indian Legal Texts</p>
 
-    <input type="file" id="fileInput" accept=".pdf,.docx,.jpg,.png" />
-    <p style="text-align:center;">— OR —</p>
-    <textarea id="textInput" placeholder="Paste or type your legal text here..."></textarea>
+  <!-- Upload Legal Document -->
+  <div class="section">
+    <h3>📄 Upload Legal Document</h3>
+    <input type="file" id="fileInput">
+    <button onclick="processFile()">Process File</button>
+  </div>
 
-    <button onclick="processInput()">🔍 Analyze Document</button>
-    <div class="loader" id="loader"></div>
+  <!-- Type Text -->
+  <div class="section">
+    <h3>✍️ Enter Legal Text</h3>
+    <textarea id="textInput" rows="6" placeholder="Type or paste your legal text here..."></textarea>
+    <button onclick="processText()">Simplify & Summarize</button>
+  </div>
 
-    <div id="results" class="result" style="display:none;">
-      <div class="card" id="summaryCard">
-        <h4>🧾 Summary</h4>
-        <p id="summaryText">N/A</p>
-      </div>
+  <!-- Output -->
+  <div class="section">
+    <h3>🧾 Results</h3>
+    <pre id="output">Your results will appear here...</pre>
 
-      <div class="card" id="simplifiedCard">
-        <h4>✏️ Simplified Text</h4>
-        <p id="simplifiedText">N/A</p>
-      </div>
-
-      <div class="card" id="lawCard">
-        <h4>⚖️ Related Law Details</h4>
-        <div id="lawDetails">N/A</div>
-      </div>
+    <div class="output-actions">
+      <button onclick="copyOutput()">📋 Copy Result</button>
+      <button onclick="downloadOutput()">💾 Download as .txt</button>
     </div>
   </div>
 
+  <!-- Developer Fine-Tuning -->
+  <button class="toggle-btn" onclick="toggleFineTune()">🔐 Developer Mode: Fine-tune Model</button>
+
+  <div id="train-section" class="section">
+    <h3>🧠 Fine-tune Model</h3>
+    <p>Upload a JSON dataset to fine-tune your summarizer model.</p>
+    <input type="file" id="trainFile">
+    <button onclick="trainModel()">Fine-tune Model</button>
+    <pre id="trainOutput"></pre>
+  </div>
+
   <script>
-    const API_BASE = "http://127.0.0.1:8000";
+    const API_URL = "http://127.0.0.1:8000";
+    let latestOutput = "";
 
-    async function processInput() {
+    function toggleFineTune() {
+      const section = document.getElementById("train-section");
+      section.style.display = section.style.display === "none" ? "block" : "none";
+    }
+
+    async function processFile() {
       const file = document.getElementById("fileInput").files[0];
-      const text = document.getElementById("textInput").value.trim();
-      const loader = document.getElementById("loader");
-      const resultsDiv = document.getElementById("results");
+      if (!file) return alert("Please choose a file first.");
 
-      if (!file && !text) {
-        alert("Please upload a file or enter text first!");
-        return;
-      }
+      const formData = new FormData();
+      formData.append("file", file);
 
-      loader.textContent = "⏳ Processing... please wait...";
-      resultsDiv.style.display = "none";
+      const res = await fetch(`${API_URL}/process`, { method: "POST", body: formData });
+      const data = await res.json();
+      displayFormattedOutput(data);
+    }
 
-      try {
-        let res;
+    async function processText() {
+      const text = document.getElementById("textInput").value;
+      if (!text.trim()) return alert("Please enter some text.");
 
-        if (file) {
-          const formData = new FormData();
-          formData.append("file", file);
-          res = await fetch(`${API_BASE}/process`, {
-            method: "POST",
-            body: formData,
-          });
-        } else {
-          res = await fetch(`${API_BASE}/process-text`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text }),
-          });
-        }
+      const res = await fetch(`${API_URL}/process-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      displayFormattedOutput(data);
+    }
 
-        const data = await res.json();
+    // 🧾 Format Output Nicely
+    function displayFormattedOutput(data) {
+      let result = "";
 
-        loader.textContent = "";
+      if (data.error) {
+        result = `⚠️ Error: ${data.error}`;
+      } else {
+        result += `📘 Summary:\n${data.summary || "No summary available."}\n\n`;
+        result += `🪶 Simplified:\n${data.simplified || "No simplified text."}\n\n`;
 
-        // Show results
-        resultsDiv.style.display = "grid";
-        document.getElementById("summaryText").textContent = data.summary || "No summary found.";
-        document.getElementById("simplifiedText").textContent = data.simplified || "No simplified text found.";
-
-        const lawDetailsDiv = document.getElementById("lawDetails");
-        lawDetailsDiv.innerHTML = "";
-        if (data.law_details && Object.keys(data.law_details).length > 0) {
-          for (const [law, desc] of Object.entries(data.law_details)) {
-            const div = document.createElement("div");
-            div.className = "law-item";
-            div.innerHTML = `<strong>${law}:</strong> ${typeof desc === "object" ? desc.description : desc}`;
-            lawDetailsDiv.appendChild(div);
+        if (data.articles_found?.length) {
+          result += `⚖️ Laws Found:\n`;
+          for (const ref of data.articles_found) {
+            const details = data.law_details?.[ref];
+            if (details) {
+              result += `• ${ref} — ${details.description}`;
+              if (details.match_type && details.match_type !== "exact") {
+                result += ` (${details.match_type})`;
+              }
+              result += `\n`;
+            }
           }
-        } else {
-          lawDetailsDiv.textContent = "No related laws found.";
         }
-
-      } catch (err) {
-        loader.textContent = "";
-        alert("❌ Error: " + err.message);
       }
+
+      latestOutput = result;
+      document.getElementById("output").textContent = result;
+    }
+
+    // 📋 Copy to Clipboard
+    function copyOutput() {
+      if (!latestOutput) return alert("No output to copy.");
+      navigator.clipboard.writeText(latestOutput)
+        .then(() => alert("Copied to clipboard!"))
+        .catch(err => alert("Failed to copy: " + err));
+    }
+
+    // 💾 Download Output
+    function downloadOutput() {
+      if (!latestOutput) return alert("No output to download.");
+      const blob = new Blob([latestOutput], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "legal_summary.txt";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    // 🧠 Fine-tune model
+    async function trainModel() {
+      const file = document.getElementById("trainFile").files[0];
+      if (!file) return alert("Please select a JSON dataset.");
+      const formData = new FormData();
+      formData.append("file", file);
+      document.getElementById("trainOutput").textContent = "⏳ Fine-tuning in progress... Please wait.";
+      const res = await fetch(`${API_URL}/train-json`, { method: "POST", body: formData });
+      const data = await res.json();
+      document.getElementById("trainOutput").textContent = JSON.stringify(data, null, 2);
     }
   </script>
+
 </body>
 </html>
