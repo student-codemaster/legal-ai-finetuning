@@ -1,0 +1,19 @@
+fastapi
+uvicorn
+transformers
+torch
+sentence-transformers
+pandas
+datasets
+pytesseract
+pillow
+python-docx
+pymupdf
+python-multipart 
+sqlalchemy 
+pymysql 
+ torch 
+ torchvision 
+  --index-url https://download.pytorch.org/whl/cpu
+
+
