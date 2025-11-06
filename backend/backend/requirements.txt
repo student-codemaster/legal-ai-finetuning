@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+transformers
+torch
+sentence-transformers
+pandas
+datasets
+pytesseract
+pillow
+python-docx
+pymupdf
+
+
+

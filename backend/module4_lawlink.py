@@ -1,168 +1,84 @@
+# backend/module4_lawlink.py
 import pandas as pd
+import os
 from difflib import get_close_matches
 from sentence_transformers import SentenceTransformer, util
 import torch
-import os
+from .config import EMBEDDING_MODEL
 
-# ---------------------------
-# ✅ Model Setup
-# ---------------------------
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"⚙️ Using device: {device.upper()}")
+# Load law DB from SQL at startup if available — but also allow CSV
+from .database import SessionLocal, Law
 
-# Load a lightweight transformer for semantic similarity (fast + accurate)
-model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+def load_laws_from_db():
+    db = SessionLocal()
+    rows = db.query(Law).all()
+    db.close()
+    law_map = {}
+    for r in rows:
+        law_map[r.law_ref.strip().lower()] = r.description
+    return law_map
 
+LAW_DB = load_laws_from_db()
 
-# ---------------------------
-# ✅ Load Indian Law Dataset
-# ---------------------------
-def load_law_database(csv_path: str = "backend/laws_dataset.csv"):
-    """
-    Load Indian law references from CSV.
-    Expected columns: 'law_ref', 'description'
-    - Case-insensitive keys
-    - Trims spaces
-    """
-    try:
-        if not os.path.exists(csv_path):
-            raise FileNotFoundError(f"{csv_path} not found.")
-
+# Fallback: try CSV in data/
+if not LAW_DB:
+    csv_path = "data/laws_dataset.csv"
+    if os.path.exists(csv_path):
         df = pd.read_csv(csv_path)
-
-        if "law_ref" not in df.columns or "description" not in df.columns:
-            raise ValueError("CSV must contain columns: 'law_ref' and 'description'")
-
-        # Normalize text for consistency
         df["law_ref"] = df["law_ref"].astype(str).str.strip().str.lower()
         df["description"] = df["description"].astype(str).str.strip()
+        LAW_DB = dict(zip(df["law_ref"], df["description"]))
 
-        print(f"✅ Loaded {len(df)} law records from {csv_path}")
-        return dict(zip(df["law_ref"], df["description"]))
+# semantic model
+model = None
+law_embeds = None
+law_texts = []
 
-    except Exception as e:
-        print(f"⚠️ Error loading law dataset: {e}")
-        return {}
-
-
-# ---------------------------
-# ✅ Initialize Dataset
-# ---------------------------
-LAW_DB = load_law_database()
-
-# ---------------------------
-# ✅ Precompute Embeddings
-# ---------------------------
 if LAW_DB:
-    law_texts = [f"{k} {v}" for k, v in LAW_DB.items()]
-    law_embeds = model.encode(law_texts, convert_to_tensor=True, show_progress_bar=True)
-    print(f"✅ Created {len(LAW_DB)} semantic embeddings.")
-else:
-    law_embeds = torch.tensor([], dtype=torch.float32)
-    print("⚠️ No laws loaded. Semantic search disabled.")
+    try:
+        model = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
+        law_texts = [f"{k} {v}" for k, v in LAW_DB.items()]
+        law_embeds = model.encode(law_texts, convert_to_tensor=True, show_progress_bar=False)
+    except Exception as e:
+        # if embedding model fails, proceed with fuzzy only
+        model = None
+        law_embeds = None
 
-
-# ---------------------------
-# ✅ Semantic Matching
-# ---------------------------
 def semantic_match(query: str):
-    """
-    Find semantically closest law reference to a query.
-    Uses cosine similarity on precomputed embeddings.
-    Returns: (best_match, similarity_score)
-    """
-    if not law_embeds.numel():
-        return None, 0.0
+    if not law_embeds is None and law_embeds.numel():
+        q_emb = model.encode(query, convert_to_tensor=True)
+        sims = util.cos_sim(q_emb, law_embeds)[0]
+        idx = torch.argmax(sims).item()
+        score = sims[idx].item()
+        key = list(LAW_DB.keys())[idx]
+        return key, score
+    return None, 0.0
 
-    query_emb = model.encode(query.lower(), convert_to_tensor=True)
-    sims = util.cos_sim(query_emb, law_embeds)[0]
-    idx = torch.argmax(sims).item()
-    score = sims[idx].item()
+def get_context_text(refs, top_k: int = 3):
+    info = get_law_info(refs)
+    descriptions = [v["description"] for v in info.values() if v["description"] and v["description"] != "No description available."]
+    context = " ".join(descriptions[:top_k])
+    return f"\nRelevant Legal Context:\n{context}" if context else ""
 
-    key = list(LAW_DB.keys())[idx]
-    return key, score
-
-
-# ---------------------------
-# ✅ Main Function — Get Law Info
-# ---------------------------
 def get_law_info(refs):
-    """
-    Multi-level matching for each law reference:
-    1️⃣ Exact match (case-insensitive)
-    2️⃣ Fuzzy match (string similarity)
-    3️⃣ Semantic match (SentenceTransformer)
-    Returns dict:
-        {
-          "Article 21": {"description": "...", "match_type": "semantic (article 21, 0.83)"}
-        }
-    """
     info = {}
-
-    for ref in refs:
-        if not ref or not isinstance(ref, str):
+    if not refs:
+        return info
+    for r in refs:
+        r_clean = str(r).strip().lower()
+        if not r_clean:
             continue
-
-        r_clean = ref.strip().lower()
-
-        # 1️⃣ Exact match
         if r_clean in LAW_DB:
-            info[ref] = {
-                "description": LAW_DB[r_clean],
-                "match_type": "exact"
-            }
+            info[r] = {"description": LAW_DB[r_clean], "match_type": "exact"}
             continue
-
-        # 2️⃣ Fuzzy match
         close = get_close_matches(r_clean, LAW_DB.keys(), n=1, cutoff=0.7)
         if close:
-            matched = close[0]
-            info[ref] = {
-                "description": LAW_DB[matched],
-                "match_type": f"fuzzy ({matched})"
-            }
+            m = close[0]
+            info[r] = {"description": LAW_DB[m], "match_type": f"fuzzy ({m})"}
             continue
-
-        # 3️⃣ Semantic match
-        matched, score = semantic_match(r_clean)
-        if matched and score > 0.45:
-            info[ref] = {
-                "description": LAW_DB[matched],
-                "match_type": f"semantic ({matched}, score={score:.2f})"
-            }
+        m, s = semantic_match(r_clean)
+        if m and s > 0.45:
+            info[r] = {"description": LAW_DB[m], "match_type": f"semantic ({m}, score={s:.2f})"}
         else:
-            info[ref] = {
-                "description": "No description available.",
-                "match_type": "none"
-            }
-
+            info[r] = {"description": "No description available.", "match_type": "none"}
     return info
-
-
-# ---------------------------
-# ✅ RAG Helper — Context Builder
-# ---------------------------
-def get_context_text(refs, top_k: int = 3) -> str:
-    """
-    Retrieve top law descriptions to build RAG context.
-    Used by summarize_with_rag() in module3_ai.py.
-    Example output:
-        "Relevant Legal Context:
-         Article 21: Protection of life and liberty.
-         Section 302: Punishment for murder."
-    """
-    if not refs:
-        return ""
-
-    info = get_law_info(refs)
-    descriptions = [
-        v["description"]
-        for v in info.values()
-        if v["description"] != "No description available."
-    ]
-
-    if not descriptions:
-        return ""
-
-    context = " ".join(descriptions[:top_k])
-    return f"\nRelevant Legal Context:\n{context}"

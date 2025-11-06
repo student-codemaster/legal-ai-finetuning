@@ -1,4 +1,4 @@
-# backend/faiss_index.py
+# faiss_index.py
 import faiss
 import numpy as np
 from module4_lawlink import LAW_DB, model

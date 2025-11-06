@@ -1,4 +1,4 @@
-# backend/import_laws.py
+# import_laws.py
 import pandas as pd
 from database import SessionLocal, Law
 from sqlalchemy.exc import IntegrityError
