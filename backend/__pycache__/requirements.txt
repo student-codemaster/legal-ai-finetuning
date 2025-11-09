@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pymysql
+python-multipart
+transformers   
+torch         
+datasets
+sentence-transformers

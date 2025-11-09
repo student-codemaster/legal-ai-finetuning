@@ -1,19 +1,12 @@
 fastapi
-uvicorn
+uvicorn[standard]
+sqlalchemy
+pymysql
+python-multipart
 transformers
 torch
-sentence-transformers
-pandas
 datasets
-pytesseract
-pillow
-python-docx
-pymupdf
-python-multipart 
-sqlalchemy 
-pymysql 
- torch 
- torchvision 
-  --index-url https://download.pytorch.org/whl/cpu
-
-
+sentence-transformers
+sentencepiece
+passlib[bcrypt] 
+python-jose[cryptography]

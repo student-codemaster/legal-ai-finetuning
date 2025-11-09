@@ -1,8 +1,0 @@
-copy and paste below given pointed lines
-
-install requirement first 
-**pip install fastapi uvicorn pymupdf python-docx pytesseract Pillow transformers torch
-
-go to the directory
-**cd backend 
-**uvicorn app:app --reload
