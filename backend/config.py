@@ -1,12 +1,11 @@
 # backend/config.py
+
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Database
-# Use the consolidated development DB by default. You can override with the
-# DATABASE_URL environment variable in production or other environments.
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./legal_dev.db")
 
 # JWT Settings

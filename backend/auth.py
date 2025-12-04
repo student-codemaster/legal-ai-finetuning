@@ -1,4 +1,5 @@
 # backend/auth.py
+
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -11,8 +12,6 @@ from .database import SessionLocal, User, get_db
 from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Password hashing
-# Use PBKDF2-SHA256 by default to avoid native bcrypt binding issues in some dev environments.
-# This keeps hashing consistent with the rest of the codebase which uses pbkdf2_sha256.
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer()
 
@@ -47,7 +46,7 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
     return user
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security), 
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(

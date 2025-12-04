@@ -1,10 +1,10 @@
 # backend/database.py
+
 import logging
 import os
 from datetime import datetime
-
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, DateTime, 
+    create_engine, Column, Integer, String, Text, DateTime,
     Boolean, Float, ForeignKey, func
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -17,13 +17,9 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Try to create an engine using the configured DB URL. If that fails (missing driver,
-# unreachable host, etc.) fall back to a local sqlite file so the app can still start
-# in development. This avoids hard crashes at import time.
+# Create engine
 engine = None
 try:
-    # If the configured URL is SQLite, provide the sqlite-specific connect_args
-    # required for safe usage with threaded servers (FastAPI + Uvicorn).
     if isinstance(SQLALCHEMY_DATABASE_URL, str) and SQLALCHEMY_DATABASE_URL.lower().startswith("sqlite"):
         engine = create_engine(
             SQLALCHEMY_DATABASE_URL,
@@ -37,8 +33,6 @@ try:
             max_overflow=20,
         )
 except Exception as e:
-    # Fail fast: don't silently create a second, separate DB file. Log and re-raise
-    # so the developer can fix the configured DATABASE_URL or missing DB driver.
     logger.error(
         "Failed to create engine using SQLALCHEMY_DATABASE_URL (%s): %s",
         SQLALCHEMY_DATABASE_URL,
@@ -51,7 +45,7 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
@@ -61,14 +55,14 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
-    
+
     # Relationships
     queries = relationship("UserQuery", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     session_token = Column(String(255), unique=True, index=True, nullable=False)
@@ -77,13 +71,13 @@ class UserSession(Base):
     ip_address = Column(String(45))  # IPv6 support
     user_agent = Column(Text)
     is_active = Column(Boolean, default=True)
-    
+
     # Relationships
     user = relationship("User", back_populates="sessions")
 
 class UserQuery(Base):
     __tablename__ = "user_queries"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Allow anonymous queries
     input_text = Column(Text, nullable=False)
@@ -96,14 +90,14 @@ class UserQuery(Base):
     articles_found = Column(Text)  # JSON string of articles
     law_details = Column(Text)  # JSON string of law details
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     user = relationship("User", back_populates="queries")
     feedback = relationship("UserFeedback", back_populates="query")
 
 class UserFeedback(Base):
     __tablename__ = "user_feedback"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     query_id = Column(Integer, ForeignKey("user_queries.id"), nullable=False)
     rating = Column(Integer)  # 1-5 stars
@@ -112,13 +106,13 @@ class UserFeedback(Base):
     helpful_simplification = Column(Boolean)
     accuracy_rating = Column(Integer)  # 1-5
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     query = relationship("UserQuery", back_populates="feedback")
 
 class Law(Base):
     __tablename__ = "laws"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     law_ref = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(Text, nullable=False)
@@ -129,7 +123,7 @@ class Law(Base):
 
 class ModelVersion(Base):
     __tablename__ = "model_versions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     version_name = Column(String(100), unique=True, nullable=False)
     path = Column(String(255), nullable=False)
@@ -141,7 +135,7 @@ class ModelVersion(Base):
 
 class TrainJob(Base):
     __tablename__ = "train_jobs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255))
     status = Column(String(50), default="queued")  # queued, running, done, failed
@@ -152,7 +146,7 @@ class TrainJob(Base):
 
 class AppSettings(Base):
     __tablename__ = "app_settings"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     setting_key = Column(String(100), unique=True, nullable=False)
     setting_value = Column(Text, nullable=False)
@@ -161,7 +155,7 @@ class AppSettings(Base):
 
 class Analytics(Base):
     __tablename__ = "analytics"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     event_type = Column(String(50), nullable=False)  # 'query', 'login', 'download', etc.
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -170,12 +164,10 @@ class Analytics(Base):
     user_agent = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-# Create tables (safe to call regardless of backend)
+# Create tables
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    # Creating tables failed — this is likely a misconfiguration or missing driver.
-    # Surface the error instead of silently switching to another DB file.
     logger.error("Failed to create DB tables at import time: %s", e)
     raise
 
@@ -191,10 +183,9 @@ def get_db():
 def init_database():
     """Initialize database with default data."""
     db = SessionLocal()
-    
     try:
         # Create default admin user if not exists
-        from .auth import get_password_hash
+        from auth import get_password_hash
         
         admin_user = db.query(User).filter(User.username == "admin").first()
         if not admin_user:
@@ -206,8 +197,8 @@ def init_database():
                 is_admin=True
             )
             db.add(admin_user)
-            logger.info("✓ Default admin user created: admin/admin123")
-        
+            logger.info("√ Default admin user created: admin/admin123")
+
         # Add some sample laws
         sample_laws = [
             {"law_ref": "IPC Section 302", "description": "Punishment for murder", "category": "criminal"},
@@ -217,13 +208,13 @@ def init_database():
             {"law_ref": "Constitution Article 14", "description": "Equality before law", "category": "constitutional"},
             {"law_ref": "Constitution Article 21", "description": "Protection of life and personal liberty", "category": "constitutional"},
         ]
-        
+
         for law_data in sample_laws:
             existing_law = db.query(Law).filter(Law.law_ref == law_data["law_ref"]).first()
             if not existing_law:
                 law = Law(**law_data)
                 db.add(law)
-        
+
         # Add default app settings
         default_settings = [
             {"setting_key": "MAX_FILE_SIZE_MB", "setting_value": "10", "description": "Maximum file upload size in MB"},
@@ -231,18 +222,18 @@ def init_database():
             {"setting_key": "DEFAULT_LANGUAGE", "setting_value": "en_XX", "description": "Default language for processing"},
             {"setting_key": "ENABLE_USER_REGISTRATION", "setting_value": "true", "description": "Allow new user registration"},
         ]
-        
+
         for setting_data in default_settings:
             existing_setting = db.query(AppSettings).filter(AppSettings.setting_key == setting_data["setting_key"]).first()
             if not existing_setting:
                 setting = AppSettings(**setting_data)
                 db.add(setting)
-        
+
         db.commit()
-        logger.info("✓ Database initialized successfully with default data")
+        logger.info("√ Database initialized successfully with default data")
         
     except Exception as e:
-        logger.error(f"✗ Database initialization failed: {e}")
+        logger.error(f"X Database initialization failed: {e}")
         db.rollback()
     finally:
         db.close()
@@ -260,6 +251,3 @@ def check_database_health():
         return False
     finally:
         db.close()
-
-# Call initialization on import (optional - you might want to call this manually)
-# init_database()

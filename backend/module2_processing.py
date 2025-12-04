@@ -1,4 +1,5 @@
 # backend/module2_processing.py
+
 import re
 import unicodedata
 import logging
@@ -36,24 +37,23 @@ def clean_text(text: str) -> str:
     """
     if not text:
         return ""
-
+    
     # Normalize unicode
     text = unicodedata.normalize("NFKC", text)
-
+    
     # Remove multiple spaces and newlines
     text = re.sub(r'\s+', ' ', text)
-
+    
     # Remove citations like [1], (2), AIR 1980 SC 1234, etc.
-    text = re.sub(r'\[[^\]]*\]|\([^\)]*\)|AIR\s\d{4}\s[A-Z]{2,}\s\d+', '', text)
-
+    text = re.sub(r'\[[^\]]+\]|\([^)]+\)|AIR\s\d{4}\s[A-Z]{2,}\s\d+', '', text)
+    
     # Preserve key legal terms like "Article", "Section" by not removing nearby numbers
     text = re.sub(r'(?<!Article\s)(?<!Section\s)\b\d+\b', '', text)
-
+    
     # Remove special characters (keep basic punctuation)
-    text = re.sub(r'[^a-zA-Z0-9\s\.,;:!?\'"-]', '', text)
-
+    text = re.sub(r'[^a-zA-Z0-9\s\.,:;!?\-\"]', '', text)
+    
     return text.strip()
-
 
 def preprocess_for_ai(text: str) -> str:
     """
@@ -61,22 +61,23 @@ def preprocess_for_ai(text: str) -> str:
     lemmatization when spaCy is available.
     """
     text = clean_text(text)
-
+    
     if not nlp:
         tokens = [t for t in text.split() if t.lower() not in STOPWORDS]
         return " ".join(tokens)
-
+    
     doc = nlp(text)
     processed_tokens = []
+    
     for token in doc:
         if token.is_stop or token.is_punct:
             continue
         processed_tokens.append(token.lemma_.lower())
+    
     return " ".join(processed_tokens)
 
-
 def extract_articles(text: str):
-    """
+    """  
     Extract 'Article' or 'Section' references for law linking.
-    """
+    """  
     return re.findall(r'(Article\s\d+[A-Z]?|Section\s\d+[A-Z]?)', text)

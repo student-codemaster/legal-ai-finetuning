@@ -1,0 +1,14 @@
+# Lightweight dev/test requirements (no heavy ML libs)
+# Use this for fast local dev and CI tests that mock ML
+fastapi==0.104.1
+uvicorn==0.24.0
+sqlalchemy==2.0.23
+pymysql==1.1.0
+python-multipart==0.0.6
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-dotenv==1.0.0
+pytest==7.4.3
+pytest==7.4.3
+# Optional: lightweight test/data libs (no torch/transformers/spacy)
+# pillow and python-docx removed from dev requirements to avoid build issues on some Python versions

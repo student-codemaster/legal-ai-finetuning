@@ -1,48 +1,30 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
-import ProtectedRoute from './components/protected/ProtectedRoute'
-import Header from './components/common/Header'
-import './App.css'
+// src/App.jsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import UserLogin from "./pages/UserLogin";
+import AdminLogin from "./pages/AdminLogin";
+import UserDashboard from "./pages/UserDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserProfile from "./pages/UserProfile";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
-// Lazy load components
-const Login = React.lazy(() => import('./components/auth/Login'))
-const Signup = React.lazy(() => import('./components/auth/Signup'))
-const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'))
-
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
-          <Header />
-          <main className="main-content">
-            <React.Suspense fallback={
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Loading Legal Simplifier...</p>
-              </div>
-            }>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </React.Suspense>
-          </main>
-        </div>
-      </Router>
-    </AuthProvider>
-  )
+    <Router>
+      <Routes>
+        <Route path="/" element={<UserLogin />} />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/user/dashboard" element={
+          <ProtectedRoute><UserDashboard/></ProtectedRoute>
+        }/>
+        <Route path="/user/profile" element={
+          <ProtectedRoute><UserProfile/></ProtectedRoute>
+        }/>
+        <Route path="/admin/dashboard" element={
+          <AdminRoute><AdminDashboard/></AdminRoute>
+        }/>
+      </Routes>
+    </Router>
+  );
 }
-
-export default App

@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from sqlalchemy.orm import Session
-from backend.database import SessionLocal, Law
+from .database import SessionLocal, Law
 
 def import_laws_from_csv(csv_path: str):
     """Reads laws_dataset.csv and inserts all laws into the database."""
