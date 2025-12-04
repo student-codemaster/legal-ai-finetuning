@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 This repository contains a FastAPI backend and a small React frontend (Vite) for an AI-powered legal simplifier.
 
 Quick start (Windows PowerShell):
@@ -46,6 +47,8 @@ pytest -q
 
 If you encounter errors, capture logs as described in the repository `.github/copilot-instructions.md` and paste them in an issue or here so the maintainer can help.
 
+=======
+>>>>>>> 38a0c8b8bb6a5fa5ceb05a6dd584e294765d68ad
 ⚖️ LawEase – AI Legal Simplifier  
 Intelligent Legal NLP Suite with Multilingual Summarization and Simplification
 
@@ -151,4 +154,6 @@ npm install
 
 # 2. Run development server
 npm run dev
+
+
 
