@@ -2,6 +2,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import UserLogin from "./pages/UserLogin";
+import UserSignup from "./pages/UserSignup";
 import AdminLogin from "./pages/AdminLogin";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -14,6 +15,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<UserLogin />} />
+        <Route path="/signup" element={<UserSignup />} />
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/user/dashboard" element={
           <ProtectedRoute><UserDashboard/></ProtectedRoute>
