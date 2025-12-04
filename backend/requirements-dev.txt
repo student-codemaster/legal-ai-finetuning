@@ -9,6 +9,7 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 python-dotenv==1.0.0
 pytest==7.4.3
-pytest==7.4.3
+pandas>=1.5.0
+numpy>=1.24.0
 # Optional: lightweight test/data libs (no torch/transformers/spacy)
 # pillow and python-docx removed from dev requirements to avoid build issues on some Python versions

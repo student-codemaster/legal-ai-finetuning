@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 This repository contains a FastAPI backend and a small React frontend (Vite) for an AI-powered legal simplifier.
 
 Quick start (Windows PowerShell):
