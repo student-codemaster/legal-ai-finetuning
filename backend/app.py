@@ -131,13 +131,13 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        user_email: str = payload.get("sub")
+        if user_email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
     
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(User.email == user_email).first()
     if user is None:
         raise credentials_exception
     return user
@@ -292,13 +292,11 @@ async def process_text(data: dict = Body(...)):
 # ================================================================
 
 class UserRegister(BaseModel):
-    username: str
     email: str
     password: str
-    full_name: str = None
 
 class UserLogin(BaseModel):
-    username: str
+    email: str
     password: str
 
 @app.post("/register")
@@ -306,29 +304,28 @@ async def register(
     user_data: UserRegister,
     db: Session = Depends(get_db)
 ):
-    """User registration endpoint."""
+    """User registration endpoint - email-based."""
     try:
-        print(f"Registration attempt for: {user_data.username}, {user_data.email}")
+        print(f"Registration attempt for: {user_data.email}")
         
         # Check if user already exists
         existing_user = db.query(User).filter(
-            (User.username == user_data.username) | (User.email == user_data.email)
+            User.email == user_data.email
         ).first()
         
         if existing_user:
             print("User already exists")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username or email already registered"
+                detail="Email already registered"
             )
         
-        # Create new user
+        # Create new user (non-admin by default)
         hashed_password = get_password_hash(user_data.password)
         user = User(
-            username=user_data.username,
+            username=user_data.email.split('@')[0],  # Generate username from email
             email=user_data.email,
             hashed_password=hashed_password,
-            full_name=user_data.full_name,
             is_active=True,
             is_admin=False
         )
@@ -339,17 +336,15 @@ async def register(
         print(f"User created successfully: {user.id}")
         
         # Create access token
-        access_token = create_access_token(data={"sub": user.username})
+        access_token = create_access_token(data={"sub": user.email})
         
         return {
             "message": "User created successfully",
-            "access_token": access_token,
+            "token": access_token,
             "token_type": "bearer",
             "user": {
                 "id": user.id,
-                "username": user.username,
                 "email": user.email,
-                "full_name": user.full_name,
                 "is_admin": user.is_admin
             }
         }
@@ -369,22 +364,31 @@ async def login(
     user_data: UserLogin,
     db: Session = Depends(get_db)
 ):
-    """User login endpoint."""
+    """User/Admin login endpoint - email-based."""
     try:
-        print(f"Login attempt for: {user_data.username}")
+        print(f"Login attempt for: {user_data.email}")
         
-        user = authenticate_user(db, user_data.username, user_data.password)
+        # Find user by email
+        user = db.query(User).filter(User.email == user_data.email).first()
         if not user:
-            print("Authentication failed")
+            print("User not found")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if not verify_password(user_data.password, user.hashed_password):
+            print("Password verification failed")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
             )
         
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive user"
+                detail="Account is inactive"
             )
         
         # Update last login
@@ -392,16 +396,14 @@ async def login(
         db.commit()
         
         # Create access token
-        access_token = create_access_token(data={"sub": user.username})
+        access_token = create_access_token(data={"sub": user.email})
         
         return {
-            "access_token": access_token,
+            "token": access_token,
             "token_type": "bearer",
             "user": {
                 "id": user.id,
-                "username": user.username,
                 "email": user.email,
-                "full_name": user.full_name,
                 "is_admin": user.is_admin
             }
         }

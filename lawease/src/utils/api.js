@@ -39,4 +39,5 @@ export async function getAllQueries() {
 }
 
 export default API;
+export const api = API;
 

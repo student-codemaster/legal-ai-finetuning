@@ -47,10 +47,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(100), unique=True, index=True, nullable=False)
+    username = Column(String(50), index=True, nullable=True)  # Optional, for display
+    email = Column(String(100), unique=True, index=True, nullable=False)  # Primary identifier
     hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(100))
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -185,19 +184,18 @@ def init_database():
     db = SessionLocal()
     try:
         # Create default admin user if not exists
-        from auth import get_password_hash
+        from .auth import get_password_hash
         
-        admin_user = db.query(User).filter(User.username == "admin").first()
+        admin_user = db.query(User).filter(User.email == "admin").first()
         if not admin_user:
             admin_user = User(
                 username="admin",
-                email="admin@legalsimplifier.com",
+                email="admin",
                 hashed_password=get_password_hash("admin123"),
-                full_name="System Administrator",
                 is_admin=True
             )
             db.add(admin_user)
-            logger.info("√ Default admin user created: admin/admin123")
+            logger.info("√ Default admin user created: email=admin, password=admin123")
 
         # Add some sample laws
         sample_laws = [

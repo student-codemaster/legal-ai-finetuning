@@ -4,23 +4,29 @@ import HiFiAuthCard from "../components/HiFiAuthCard";
 import { api } from "../utils/api";
 import { saveToken } from "../utils/auth";
 
-export default function UserLogin() {
+export default function AdminSignup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const loginFields = [
+  const signupFields = [
     {
       name: "email",
       label: "Email Address",
       type: "email",
-      placeholder: "you@example.com",
+      placeholder: "admin@example.com",
     },
     {
       name: "password",
       label: "Password",
       type: "password",
-      placeholder: "Enter your password",
+      placeholder: "Create a strong password",
+    },
+    {
+      name: "confirmPassword",
+      label: "Confirm Password",
+      type: "password",
+      placeholder: "Re-enter your password",
     },
   ];
 
@@ -28,6 +34,9 @@ export default function UserLogin() {
   const validateForm = (data) => {
     if (!data.email?.trim()) return "Email is required";
     if (!data.password?.trim()) return "Password is required";
+    if (data.password.length < 6) return "Password must be at least 6 characters";
+    if (!data.confirmPassword?.trim()) return "Please confirm your password";
+    if (data.password !== data.confirmPassword) return "Passwords do not match";
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) return "Please enter a valid email";
@@ -52,20 +61,19 @@ export default function UserLogin() {
         password: formData.password,
       };
 
-      const response = await api.post("/login", payload);
+      const response = await api.post("/register", payload);
 
       if (response.data?.token) {
         saveToken(response.data.token);
-        if (response.data.user?.is_admin) {
-          localStorage.setItem("is_admin", "true");
-        }
-        navigate("/user/dashboard");
+        // Note: New registrations are regular users by default
+        // Admin status must be set by existing admins via admin panel
+        navigate("/admin/dashboard");
       }
     } catch (err) {
       const errorMsg =
         err.response?.data?.detail ||
         err.response?.data?.message ||
-        "Invalid email or password";
+        "Registration failed";
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -74,12 +82,12 @@ export default function UserLogin() {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center">
-      {/* Radial Gradient Background */}
+      {/* Gradient Background - Cyan to Purple */}
       <div
         className="absolute inset-0 z-0"
         style={{
           background:
-            "radial-gradient(circle at center, #1EA1FF 0%, #003D9E 100%)",
+            "radial-gradient(circle at center, #00D4FF 0%, #7C3AED 100%)",
         }}
       />
 
@@ -107,7 +115,7 @@ export default function UserLogin() {
         style={{
           width: "400px",
           height: "400px",
-          backgroundColor: "#0047AB",
+          backgroundColor: "#7C3AED",
           animation: "float 10s ease-in-out infinite reverse",
         }}
       />
@@ -127,7 +135,7 @@ export default function UserLogin() {
               textShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
             }}
           >
-            ⚖️ LawEase
+            ⚖️ LawEase Admin
           </h2>
           <p
             style={{
@@ -137,26 +145,26 @@ export default function UserLogin() {
               letterSpacing: "0.3px",
             }}
           >
-            Simplifying legal documents for everyone
+            Administrative portal registration
           </p>
         </div>
 
-        {/* Auth Card - Login Only */}
+        {/* Auth Card - Signup Only */}
         <HiFiAuthCard
-          title="User Login"
-          isLogin={true}
-          onToggle={() => navigate("/user/signup")}
+          title="Create Admin Account"
+          isLogin={false}
+          onToggle={() => navigate("/admin/login")}
           onSubmit={handleSubmit}
           error={error}
           loading={loading}
-          fields={loginFields}
-          submitButtonText="Login Now"
-          bottomText="Don't have an account?"
-          bottomLinkText="Sign up here"
-          onBottomLinkClick={() => navigate("/user/signup")}
+          fields={signupFields}
+          submitButtonText="Create Admin Account"
+          bottomText="Already have an account?"
+          bottomLinkText="Sign in here"
+          onBottomLinkClick={() => navigate("/admin/login")}
         />
 
-        {/* Admin Portal Link */}
+        {/* User Portal Link */}
         <div className="mt-8 text-center">
           <p
             style={{
@@ -166,10 +174,10 @@ export default function UserLogin() {
               marginBottom: "12px",
             }}
           >
-            Admin?
+            Regular User?
           </p>
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/")}
             className="px-8 py-3 rounded-full font-medium transition-all duration-300 hover:shadow-lg"
             style={{
               background: "rgba(255, 255, 255, 0.2)",
@@ -195,7 +203,7 @@ export default function UserLogin() {
               e.target.style.boxShadow = "none";
             }}
           >
-            👨‍💼 Admin Portal
+            👥 User Portal
           </button>
         </div>
 
@@ -216,11 +224,11 @@ export default function UserLogin() {
               fontWeight: 500,
             }}
           >
-            Other Pages
+            Admin Pages
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/admin/login")}
               className="px-5 py-2.5 rounded-full font-medium transition-all duration-300"
               style={{
                 background: "rgba(255, 255, 255, 0.12)",
@@ -245,10 +253,10 @@ export default function UserLogin() {
                 e.target.style.boxShadow = "none";
               }}
             >
-              🏠 Home
+              🔐 Admin Login
             </button>
             <button
-              onClick={() => navigate("/user/signup")}
+              onClick={() => navigate("/admin")}
               className="px-5 py-2.5 rounded-full font-medium transition-all duration-300"
               style={{
                 background: "rgba(255, 255, 255, 0.12)",
@@ -273,7 +281,7 @@ export default function UserLogin() {
                 e.target.style.boxShadow = "none";
               }}
             >
-              📝 Signup
+              🏠 Main Admin
             </button>
           </div>
         </div>

@@ -1,238 +1,312 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import API from "../utils/api";
+import { useNavigate } from "react-router-dom";
+import HiFiAuthCard from "../components/HiFiAuthCard";
+import { api } from "../utils/api";
 import { saveToken } from "../utils/auth";
 
 export default function UserSignup() {
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    fullName: "",
-  });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
+  const signupFields = [
+    {
+      name: "email",
+      label: "Email Address",
+      type: "email",
+      placeholder: "you@example.com",
+    },
+    {
+      name: "password",
+      label: "Password",
+      type: "password",
+      placeholder: "Create a strong password",
+    },
+    {
+      name: "confirmPassword",
+      label: "Confirm Password",
+      type: "password",
+      placeholder: "Re-enter your password",
+    },
+  ];
+
+  // Validation helper
+  const validateForm = (data) => {
+    if (!data.email?.trim()) return "Email is required";
+    if (!data.password?.trim()) return "Password is required";
+    if (data.password.length < 6) return "Password must be at least 6 characters";
+    if (!data.confirmPassword?.trim()) return "Please confirm your password";
+    if (data.password !== data.confirmPassword) return "Passwords do not match";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) return "Please enter a valid email";
+
+    return null;
   };
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
+  // Handle form submission
+  const handleSubmit = async (formData) => {
     setError("");
+    const validationError = validateForm(formData);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setLoading(true);
-
-    // Validation
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError("All fields are required");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const res = await API.post("/register", {
-        username: formData.username,
+      const payload = {
         email: formData.email,
         password: formData.password,
-        full_name: formData.fullName,
-      });
+      };
 
-      saveToken(res.data.access_token);
-      localStorage.setItem("is_admin", res.data.user.is_admin);
-      
-      setFormData({
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        fullName: "",
-      });
+      const response = await api.post("/register", payload);
 
-      navigate("/user/dashboard");
+      if (response.data?.token) {
+        saveToken(response.data.token);
+        if (response.data.user?.is_admin) {
+          localStorage.setItem("is_admin", "true");
+        }
+        navigate("/user/dashboard");
+      }
     } catch (err) {
-      setError(
+      const errorMsg =
         err.response?.data?.detail ||
-        "Signup failed. Username or email already exists."
-      );
+        err.response?.data?.message ||
+        "Registration failed";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center">
+      {/* Radial Gradient Background */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(circle at center, #1EA1FF 0%, #003D9E 100%)",
+        }}
+      />
+
+      {/* Vignette Effect */}
+      <div
+        className="absolute inset-0 z-1"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%)",
+        }}
+      />
+
       {/* Animated Background Elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
+      <div
+        className="absolute top-20 left-10 rounded-full opacity-20 mix-blend-multiply filter blur-3xl animate-pulse"
+        style={{
+          width: "300px",
+          height: "300px",
+          backgroundColor: "#00D4FF",
+          animation: "float 8s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute bottom-20 right-10 rounded-full opacity-20 mix-blend-multiply filter blur-3xl animate-pulse"
+        style={{
+          width: "400px",
+          height: "400px",
+          backgroundColor: "#0047AB",
+          animation: "float 10s ease-in-out infinite reverse",
+        }}
+      />
 
-      <div className="relative w-full max-w-md">
-        {/* Card Container */}
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8 space-y-6">
-          {/* Header */}
-          <div className="space-y-2 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white text-2xl font-bold">⚖️</span>
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-300 to-blue-500 bg-clip-text text-transparent">
-              LawEase
-            </h1>
-            <p className="text-gray-300 text-sm">Create your account</p>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3">
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleSignup} className="space-y-4">
-            {/* Full Name Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            {/* Email Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            {/* Username Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="johndoe"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            {/* Password Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            {/* Confirm Password Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {loading ? "Creating Account..." : "Sign Up"}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-slate-950 text-gray-400">Already have an account?</span>
-            </div>
-          </div>
-
-          {/* Login Link */}
-          <Link
-            to="/"
-            className="block w-full py-3 px-4 text-center border border-white/10 text-gray-300 font-medium rounded-lg hover:bg-white/5 transition"
+      {/* Content Container */}
+      <div className="relative z-10 w-full flex flex-col items-center justify-center px-4">
+        {/* Logo and Title Section */}
+        <div className="mb-8 text-center">
+          <h2
+            className="text-white font-bold"
+            style={{
+              fontSize: "32px",
+              fontWeight: 700,
+              letterSpacing: "0.5px",
+              fontFamily: "Poppins, Inter, Roboto, sans-serif",
+              marginBottom: "8px",
+              textShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+            }}
           >
-            Sign In Instead
-          </Link>
+            ⚖️ LawEase
+          </h2>
+          <p
+            style={{
+              color: "rgba(255, 255, 255, 0.8)",
+              fontSize: "14px",
+              fontFamily: "Poppins, Inter, Roboto, sans-serif",
+              letterSpacing: "0.3px",
+            }}
+          >
+            Simplifying legal documents for everyone
+          </p>
         </div>
 
-        {/* Footer Text */}
-        <p className="text-center text-gray-500 text-xs mt-6">
-          By signing up, you agree to our Terms of Service and Privacy Policy
-        </p>
+        {/* Auth Card - Signup Only */}
+        <HiFiAuthCard
+          title="Create Account"
+          isLogin={false}
+          onToggle={() => navigate("/user/login")}
+          onSubmit={handleSubmit}
+          error={error}
+          loading={loading}
+          fields={signupFields}
+          submitButtonText="Create Account"
+          bottomText="Already have an account?"
+          bottomLinkText="Sign in here"
+          onBottomLinkClick={() => navigate("/user/login")}
+        />
+
+        {/* Admin Portal Link */}
+        <div className="mt-8 text-center">
+          <p
+            style={{
+              color: "rgba(255, 255, 255, 0.7)",
+              fontSize: "13px",
+              fontFamily: "Poppins, Inter, Roboto, sans-serif",
+              marginBottom: "12px",
+            }}
+          >
+            Admin?
+          </p>
+          <button
+            onClick={() => navigate("/admin")}
+            className="px-8 py-3 rounded-full font-medium transition-all duration-300 hover:shadow-lg"
+            style={{
+              background: "rgba(255, 255, 255, 0.2)",
+              color: "#FFFFFF",
+              border: "1.5px solid rgba(255, 255, 255, 0.4)",
+              fontSize: "14px",
+              fontWeight: 600,
+              fontFamily: "Poppins, Inter, Roboto, sans-serif",
+              cursor: "pointer",
+              backdropFilter: "blur(10px)",
+              transition: "all 300ms ease",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = "rgba(255, 255, 255, 0.3)";
+              e.target.style.borderColor = "rgba(255, 255, 255, 0.6)";
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 8px 20px rgba(255, 255, 255, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "rgba(255, 255, 255, 0.2)";
+              e.target.style.borderColor = "rgba(255, 255, 255, 0.4)";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "none";
+            }}
+          >
+            👨‍💼 Admin Portal
+          </button>
+        </div>
+
+        {/* Quick Access Section */}
+        <div
+          className="mt-6 text-center space-y-3"
+          style={{
+            maxWidth: "320px",
+          }}
+        >
+          <p
+            style={{
+              color: "rgba(255, 255, 255, 0.5)",
+              fontSize: "11px",
+              fontFamily: "Poppins, Inter, Roboto, sans-serif",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+              fontWeight: 500,
+            }}
+          >
+            Other Pages
+          </p>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <button
+              onClick={() => navigate("/")}
+              className="px-5 py-2.5 rounded-full font-medium transition-all duration-300"
+              style={{
+                background: "rgba(255, 255, 255, 0.12)",
+                color: "#FFFFFF",
+                border: "1.4px solid rgba(255, 255, 255, 0.25)",
+                fontSize: "13px",
+                fontWeight: 600,
+                fontFamily: "Poppins, Inter, Roboto, sans-serif",
+                cursor: "pointer",
+                backdropFilter: "blur(8px)",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.22)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.4)";
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 6px 16px rgba(255, 255, 255, 0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.12)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.25)";
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "none";
+              }}
+            >
+              🏠 Home
+            </button>
+            <button
+              onClick={() => navigate("/user/login")}
+              className="px-5 py-2.5 rounded-full font-medium transition-all duration-300"
+              style={{
+                background: "rgba(255, 255, 255, 0.12)",
+                color: "#FFFFFF",
+                border: "1.4px solid rgba(255, 255, 255, 0.25)",
+                fontSize: "13px",
+                fontWeight: 600,
+                fontFamily: "Poppins, Inter, Roboto, sans-serif",
+                cursor: "pointer",
+                backdropFilter: "blur(8px)",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.22)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.4)";
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 6px 16px rgba(255, 255, 255, 0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.12)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.25)";
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "none";
+              }}
+            >
+              👤 Login
+            </button>
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
-        @keyframes blob {
+        @keyframes float {
           0%, 100% {
-            transform: translate(0, 0) scale(1);
+            transform: translateY(0px);
           }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
+          50% {
+            transform: translateY(-30px);
           }
         }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>
